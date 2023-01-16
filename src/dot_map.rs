@@ -31,8 +31,32 @@ impl DotMap {
         }
     }
     // DotMapを1ピクセル4バイトでrgbaを表し、u8のベクタにまとめる
-    fn convert_to_color_bytes(&self, player_exploding: bool) -> Vec<u8> {
+    // top_areaとbottom_areaもまとめる
+    fn convert_to_color_bytes(
+        &self,
+        top: &Vec<Vec<u8>>,
+        bottom: &Vec<Vec<u8>>,
+        player_exploding: bool,
+    ) -> Vec<u8> {
         let mut color_bytes: Vec<u8> = Vec::new();
+        // 画面上のエリア
+        for i_char in 0..(canvas::TOP_HEIGHT / 8) as usize {
+            for bit in 0..8 {
+                for pos_x in 0..canvas::TOP_WIDTH as usize {
+                    if top[i_char][pos_x] & (1 << bit) == 0 {
+                        color_bytes.write(&[0, 0, 0, 255]).unwrap();
+                    } else {
+                        if player_exploding {
+                            // プレイヤーが爆発中はすべて赤にする
+                            color_bytes.write(&set_color(Color::Red)).unwrap();
+                        } else {
+                            color_bytes.write(&set_color(Color::White)).unwrap();
+                        }
+                    }
+                }
+            }
+        }
+        // メインのゲームエリア
         for i_char in 0..(canvas::GAME_HEIGHT / 8) as usize {
             for bit in 0..8 {
                 for pos_x in 0..canvas::GAME_WIDTH as usize {
@@ -50,10 +74,33 @@ impl DotMap {
                 }
             }
         }
+        // 画面下のエリア
+        for i_char in 0..(canvas::BOTTOM_HEIGHT / 8) as usize {
+            for bit in 0..8 {
+                for pos_x in 0..canvas::BOTTOM_WIDTH as usize {
+                    if bottom[i_char][pos_x] & (1 << bit) == 0 {
+                        color_bytes.write(&[0, 0, 0, 255]).unwrap();
+                    } else {
+                        if player_exploding {
+                            // プレイヤーが爆発中はすべて赤にする
+                            color_bytes.write(&set_color(Color::Red)).unwrap();
+                        } else {
+                            color_bytes.write(&set_color(Color::Turquoise)).unwrap();
+                        }
+                    }
+                }
+            }
+        }
         color_bytes
     }
-    pub fn dot_map2imagedata(&self, player_exploding: bool) -> (ImageData, Vec<u8>) {
-        let rgba = self.convert_to_color_bytes(player_exploding);
+    // ビットで表現されたマップをrgbaの配列に変換する
+    pub fn dot_map2imagedata(
+        &self,
+        top: &Vec<Vec<u8>>,
+        bottom: &Vec<Vec<u8>>,
+        player_exploding: bool,
+    ) -> (ImageData, Vec<u8>) {
+        let rgba = self.convert_to_color_bytes(top, bottom, player_exploding);
         (rgba2imagedata(&rgba), rgba)
     }
 }
@@ -62,13 +109,13 @@ impl DotMap {
 fn rgba2imagedata(rgba: &Vec<u8>) -> ImageData {
     ImageData::new_with_u8_clamped_array_and_sh(
         Clamped(rgba),
-        canvas::GAME_WIDTH as _,
-        canvas::GAME_HEIGHT as _,
+        canvas::ALL_WIDTH as _,
+        canvas::ALL_HEIGHT as _,
     )
     .unwrap()
 }
 
-pub enum Color {
+enum Color {
     Red,       // 赤色
     Purple,    // 紫色
     BLUE,      // 青色
@@ -78,7 +125,7 @@ pub enum Color {
     White,     // 白色
 }
 // 指定した色に対応するrgbaの値を返す
-pub fn set_color(color: Color) -> [u8; 4] {
+fn set_color(color: Color) -> [u8; 4] {
     match color {
         Color::Red => [210, 0, 0, 255],          // 赤色
         Color::Purple => [220, 20, 230, 255],    // 紫色

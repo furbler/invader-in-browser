@@ -442,6 +442,7 @@ impl Alien {
         self.show_sprite = true;
         self.i_cursor_alien = 0;
         self.speed = Vec2::new(2, 0);
+        self.se_index = 0;
 
         // ステージ数によって初期位置が決まる
         self.ref_alien_pos.x = 24;

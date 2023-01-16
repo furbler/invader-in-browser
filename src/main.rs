@@ -258,21 +258,10 @@ impl GameCanvas {
         ctx.set_fill_style(&JsValue::from("rgb(0,0,0)"));
         ctx.fill_rect(0.0, 0.0, canvas.width().into(), canvas.height().into());
 
-        let (top_imagedata, _top_unused) = self.top.dot_map2imagedata(self.player_exploding);
-        let (game_imagedata, _game_unused) = self.map.dot_map2imagedata(self.player_exploding);
-        let (bottom_imagedata, _bottom_unused) =
-            self.bottom.dot_map2imagedata(self.player_exploding);
-
-        // ctx.put_image_data(&top_imagedata, 0., 0.).unwrap();
-        ctx.put_image_data(&game_imagedata, 0., canvas::TOP_HEIGHT as _)
-            .unwrap();
-        ctx.put_image_data(
-            &bottom_imagedata,
-            0.,
-            (canvas::TOP_HEIGHT + canvas::GAME_HEIGHT) as _,
-        )
-        .unwrap();
-
+        let (game_imagedata, _game_unused) =
+            self.map
+                .dot_map2imagedata(&self.top.top, &self.bottom.bottom, self.player_exploding);
+        ctx.put_image_data(&game_imagedata, 0., 0.).unwrap();
         // 得点表示
         self.top.draw_score(self.player_bullet.score);
         // 残機表示
