@@ -14,4 +14,4 @@ pub const ALL_WIDTH: i32 = TOP_WIDTH;
 pub const ALL_HEIGHT: i32 = TOP_HEIGHT + GAME_HEIGHT + BOTTOM_HEIGHT;
 
 // 1ドットを何ピクセル四方で表示するか(pixel / dot)
-pub const SCALE: i32 = 3;
+pub const SCALE: i32 = 2;

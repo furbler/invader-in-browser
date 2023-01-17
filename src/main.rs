@@ -50,6 +50,7 @@ pub enum Msg {
 
 struct GameCanvas {
     canvas: NodeRef,
+    tmp_canvas: HtmlCanvasElement,
     map: DotMap,
     top: TopArea,
     bottom: BottomArea,
@@ -132,13 +133,38 @@ impl Component for GameCanvas {
         );
         let alien_bullets = alien::BulletManage::new(alien_bullet_explosion_data.create_dot_map());
 
+        let tmp_canvas: HtmlCanvasElement = window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .create_element("canvas")
+            .unwrap()
+            .unchecked_into();
+        // let tmp_canvas = window()
+        //     .unwrap()
+        //     .document()
+        //     .unwrap()
+        //     .create_element("canvas")
+        //     .unwrap();
+        // tmp_canvas.get_con
+
+        tmp_canvas.set_width(canvas::ALL_WIDTH as _);
+        tmp_canvas.set_height(canvas::ALL_HEIGHT as _);
+
+        // let tmp_canvas: HtmlCanvasElement = tmp_canvas
+        //     .get_context("2d")
+        //     .unwrap()
+        //     .unwrap()
+        //     .unchecked_into();
+
         let comp_ctx = ctx.link().clone();
         let callback = Closure::wrap(
             Box::new(move || comp_ctx.send_message(Msg::MainLoop)) as Box<dyn FnMut()>
         );
 
         Self {
-            canvas: NodeRef::default(),
+            canvas: NodeRef::default().clone(),
+            tmp_canvas,
             top,
             map,
             bottom,
@@ -261,7 +287,26 @@ impl GameCanvas {
         let (game_imagedata, _game_unused) =
             self.map
                 .dot_map2imagedata(&self.top.top, &self.bottom.bottom, self.player_exploding);
-        ctx.put_image_data(&game_imagedata, 0., 0.).unwrap();
+        // オリジナルサイズ(scale = 1)のキャンバス
+        let tmp_ctx: CanvasRenderingContext2d = self
+            .tmp_canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .unchecked_into();
+        // 画像のぼやけを防ぐ
+        tmp_ctx.set_image_smoothing_enabled(false);
+        tmp_ctx.put_image_data(&game_imagedata, 0., 0.).unwrap();
+        // 拡大表示
+        ctx.draw_image_with_html_canvas_element_and_dw_and_dh(
+            &self.tmp_canvas,
+            0.,
+            0.,
+            (canvas::ALL_WIDTH * canvas::SCALE) as _,
+            (canvas::ALL_HEIGHT * canvas::SCALE) as _,
+        )
+        .unwrap();
+
         // 得点表示
         self.top.draw_score(self.player_bullet.score);
         // 残機表示
@@ -426,39 +471,6 @@ impl GameCanvas {
     }
 }
 
-fn draw_title(ctx: &CanvasRenderingContext2d) {
-    let ref_pos_x = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 2.;
-    let ref_pos_y = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 4.;
-    ctx.set_font("90px monospace");
-    ctx.set_fill_style(&JsValue::from("rgba(200, 10, 10)"));
-    ctx.fill_text("Invader", ref_pos_x - 170., ref_pos_y)
-        .unwrap();
-
-    ctx.set_font("40px monospace");
-    ctx.fill_text("Press Enter", ref_pos_x - 120., ref_pos_y + 80.)
-        .unwrap();
-}
-
-fn draw_pause(ctx: &CanvasRenderingContext2d) {
-    let ref_pos_x = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 2.;
-    let ref_pos_y = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 4.;
-    ctx.set_font("90px monospace");
-    ctx.set_fill_style(&JsValue::from("rgba(200, 10, 10)"));
-    ctx.fill_text("Pause", ref_pos_x - 170., ref_pos_y).unwrap();
-
-    ctx.set_font("40px monospace");
-    ctx.fill_text("Press Escape", ref_pos_x - 120., ref_pos_y + 80.)
-        .unwrap();
-}
-fn draw_gameover_message(ctx: &CanvasRenderingContext2d) {
-    let ref_pos_x = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 2.;
-    let ref_pos_y = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 4.;
-    ctx.set_font("90px monospace");
-    ctx.set_fill_style(&JsValue::from("rgba(200, 10, 10)"));
-    ctx.fill_text("Game over", ref_pos_x - 170., ref_pos_y)
-        .unwrap();
-}
-
 #[function_component(App)]
 fn app_body() -> Html {
     html! {
@@ -472,4 +484,37 @@ fn main() {
     // デバッグ出力用
     wasm_logger::init(wasm_logger::Config::default());
     yew::start_app::<App>();
+}
+
+fn draw_title(ctx: &CanvasRenderingContext2d) {
+    let ref_pos_x = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 2.;
+    let ref_pos_y = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 4.;
+    ctx.set_font("80px monospace");
+    ctx.set_fill_style(&JsValue::from("rgba(200, 10, 10)"));
+    ctx.fill_text("Invader", ref_pos_x - 160., ref_pos_y)
+        .unwrap();
+
+    ctx.set_font("40px monospace");
+    ctx.fill_text("Press Enter", ref_pos_x - 125., ref_pos_y + 70.)
+        .unwrap();
+}
+
+fn draw_pause(ctx: &CanvasRenderingContext2d) {
+    let ref_pos_x = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 2.;
+    let ref_pos_y = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 4.;
+    ctx.set_font("80px monospace");
+    ctx.set_fill_style(&JsValue::from("rgba(200, 10, 10)"));
+    ctx.fill_text("Pause", ref_pos_x - 120., ref_pos_y).unwrap();
+
+    ctx.set_font("40px monospace");
+    ctx.fill_text("Press Esc", ref_pos_x - 110., ref_pos_y + 60.)
+        .unwrap();
+}
+fn draw_gameover_message(ctx: &CanvasRenderingContext2d) {
+    let ref_pos_x = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 2.;
+    let ref_pos_y = (canvas::ALL_WIDTH * canvas::SCALE) as f64 / 4.;
+    ctx.set_font("70px monospace");
+    ctx.set_fill_style(&JsValue::from("rgba(200, 10, 10)"));
+    ctx.fill_text("Game over", ref_pos_x - 170., ref_pos_y)
+        .unwrap();
 }
