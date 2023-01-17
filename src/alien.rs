@@ -387,6 +387,8 @@ pub struct Alien {
     table_init_pos_y: Vec<i32>,
     // 再生するサウンドのインデックス番号
     se_index: usize,
+    // 前回音を再生してからのtick数
+    se_interval: i32,
 }
 
 impl Alien {
@@ -433,6 +435,7 @@ impl Alien {
             live_num: 55,
             table_init_pos_y,
             se_index: 0,
+            se_interval: 0,
         }
     }
     // エイリアンを初期化する
@@ -443,6 +446,7 @@ impl Alien {
         self.i_cursor_alien = 0;
         self.speed = Vec2::new(2, 0);
         self.se_index = 0;
+        self.se_interval = 0;
 
         // ステージ数によって初期位置が決まる
         self.ref_alien_pos.x = 24;
@@ -504,11 +508,14 @@ impl Alien {
             // リファレンスエイリアンを移動させる
             self.ref_alien_pos += self.speed;
             // カーソルエイリアン(に一番近い個体)が動いた時に侵攻音再生
-            if audio.invader_move.len() > 0 {
+            // 音が保存されており、前回の再生から5tick経過していた時のみ再生
+            if 0 < audio.invader_move.len() && 4 < self.se_interval {
                 audio.play_once_sound(&audio.invader_move[self.se_index]);
                 self.se_index = (self.se_index + 1) % 4;
+                self.se_interval = 0;
             }
         }
+        self.se_interval += 1;
     }
     // 一番下のエイリアンがプレイヤーの高さまで侵攻したら真を返す
     pub fn invaded(&self) -> bool {
