@@ -387,8 +387,10 @@ pub struct Alien {
     table_init_pos_y: Vec<i32>,
     // 再生するサウンドのインデックス番号
     se_index: usize,
-    // 前回音を再生してからのtick数
-    se_interval: i32,
+    // 前回音を再生してからの経過tick数
+    se_ticks: i32,
+    // サウンドの再生を許可する間隔の最低tick数
+    se_permit: i32,
 }
 
 impl Alien {
@@ -435,7 +437,8 @@ impl Alien {
             live_num: 55,
             table_init_pos_y,
             se_index: 0,
-            se_interval: 0,
+            se_ticks: 0,
+            se_permit: Self::se_permit(55),
         }
     }
     // エイリアンを初期化する
@@ -446,7 +449,8 @@ impl Alien {
         self.i_cursor_alien = 0;
         self.speed = Vec2::new(2, 0);
         self.se_index = 0;
-        self.se_interval = 0;
+        self.se_ticks = Self::se_permit(55) + 1;
+        self.se_permit = Self::se_permit(55);
 
         // ステージ数によって初期位置が決まる
         self.ref_alien_pos.x = 24;
@@ -458,6 +462,7 @@ impl Alien {
         self.pre_ref_alien_pos = self.ref_alien_pos;
     }
     pub fn update(&mut self, dot_map: &mut DotMap, player_exploding: bool, audio: &Audio) {
+        self.se_ticks += 1;
         // プレイヤーまたはエイリアンが爆発中はすべてのエイリアンを停止させる
         if player_exploding || self.explosion.effect_cnt != None {
             self.explosion.update(dot_map);
@@ -509,13 +514,12 @@ impl Alien {
             self.ref_alien_pos += self.speed;
             // カーソルエイリアン(に一番近い個体)が動いた時に侵攻音再生
             // 音が保存されており、前回の再生から5tick経過していた時のみ再生
-            if 0 < audio.invader_move.len() && 4 < self.se_interval {
+            if 0 < audio.invader_move.len() && self.se_permit <= self.se_ticks {
                 audio.play_once_sound(&audio.invader_move[self.se_index]);
                 self.se_index = (self.se_index + 1) % 4;
-                self.se_interval = 0;
+                self.se_ticks = 0;
             }
         }
-        self.se_interval += 1;
     }
     // 一番下のエイリアンがプレイヤーの高さまで侵攻したら真を返す
     pub fn invaded(&self) -> bool {
@@ -549,6 +553,7 @@ impl Alien {
     // インデックス番号で指定されたエイリアンを消す
     pub fn remove(&mut self, dot_map: &mut DotMap, i: usize, audio: &Audio) {
         self.live[i] = false;
+        self.se_permit = Self::se_permit(self.live_num);
         let width = self.sprite_list[2 * Alien::ret_alien_type(i)].len();
         let alien_pos = self.index2pos(i);
 
@@ -563,6 +568,28 @@ impl Alien {
         // 爆発音再生
         if let Some(sound) = &audio.invader_explosion {
             audio.play_once_sound(sound);
+        }
+    }
+    // エイリアンの残りの数に応じたサウンド再生の間隔tickを設定
+    fn se_permit(alien_num: i32) -> i32 {
+        match alien_num {
+            50..=55 => 52,
+            43..=49 => 46,
+            36..=42 => 39,
+            28..=35 => 34,
+            22..=27 => 28,
+            17..=21 => 24,
+            13..=16 => 21,
+            10..=12 => 19,
+            8 | 9 => 16,
+            7 => 14,
+            6 => 13,
+            5 => 12,
+            4 => 11,
+            3 => 9,
+            2 => 7,
+            1 => 5,
+            _ => 52,
         }
     }
     // プレイヤーの弾の座標を引数として、エイリアンに当たった場合はそのエイリアンのインデックス番号を返す

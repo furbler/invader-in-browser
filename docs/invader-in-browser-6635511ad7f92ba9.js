@@ -791,7 +791,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('invader-in-browser-4880b84e007570a5_bg.wasm', import.meta.url);
+        input = new URL('invader-in-browser-6635511ad7f92ba9_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
